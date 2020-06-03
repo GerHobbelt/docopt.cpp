@@ -281,7 +281,7 @@ namespace docopt {
 		if (kind_ == Kind::String) {
 			const std::string& str = variant_.strValue;
 			std::size_t pos;
-			const long ret = stol(str, &pos); // Throws if it can't convert
+			const long ret = stol(str, &pos, 0); // Throws if it can't convert
 			if (pos != str.length()) {
 				// The string ended in non-digits.
 				throw std::runtime_error( str + " contains non-numeric characters.");
