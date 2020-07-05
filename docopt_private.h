@@ -458,6 +458,28 @@ namespace docopt {
 			} else {
 				(**same_name).setValue(value{val});
 			}
+		} else if (getValue().isInt64()) {
+			int64_t val = 1;
+			if (same_name == collected.end()) {
+				collected.push_back(match.second);
+				match.second->setValue(value(val, 0));
+			} else if ((**same_name).getValue().isInt64()) {
+				val += (**same_name).getValue().asInt64();
+				(**same_name).setValue(value(val, 0));
+			} else {
+				(**same_name).setValue(value(val, 0));
+			}
+		} else if (getValue().isUint64()) {
+			uint64_t val = 1;
+			if (same_name == collected.end()) {
+				collected.push_back(match.second);
+				match.second->setValue(value{val});
+			} else if ((**same_name).getValue().isUint64()) {
+				val += (**same_name).getValue().asUint64();
+				(**same_name).setValue(value{val});
+			} else {
+				(**same_name).setValue(value{val});
+			}
 		} else if (getValue().isStringList()) {
 			std::vector<std::string> val;
 			if (match.second->getValue().isString()) {

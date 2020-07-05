@@ -32,6 +32,12 @@ std::ostream& docopt::operator<<(std::ostream& os, value const& val)
 	} else if (val.isLong()) {
 		long v = val.asLong();
 		os << v;
+	} else if (val.isInt64()) {
+		auto v = val.asInt64();
+		os << v;
+	} else if (val.isUint64()) {
+		auto v = val.asUint64();
+		os << v;
 	} else if (val.isString()) {
 		std::string const& str = val.asString();
 		os << '"' << str << '"';

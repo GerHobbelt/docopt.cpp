@@ -9,6 +9,8 @@
 #ifndef docopt__value_h_
 #define docopt__value_h_
 
+#include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 #include <functional> // std::hash
@@ -21,13 +23,15 @@ namespace docopt {
 		Empty,
 		Bool,
 		Long,
+		Int64,
+		Uint64,
 		String,
 		StringList
 	};
 
 	/// A generic type to hold the various types that can be produced by docopt.
 	///
-	/// This type can be one of: {bool, long, string, vector<string>}, or empty.
+	/// This type can be one of: {bool, long, int64_t, uint64_t, string, vector<string>}, or empty.
 	struct value {
 		/// An empty value
 		value() {}
@@ -37,6 +41,8 @@ namespace docopt {
 		
 		explicit value(bool);
 		explicit value(long);
+		value(int64_t, int);
+		explicit value(uint64_t);
 		explicit value(int v) : value(static_cast<long>(v)) {}
 
 		~value();
@@ -54,11 +60,15 @@ namespace docopt {
 		bool isBool()       const { return kind_==Kind::Bool; }
 		bool isString()     const { return kind_==Kind::String; }
 		bool isLong()       const { return kind_==Kind::Long; }
+		bool isInt64()      const { return kind_==Kind::Int64; }
+		bool isUint64()     const { return kind_==Kind::Uint64; }
 		bool isStringList() const { return kind_==Kind::StringList; }
 
 		// Throws std::invalid_argument if the type does not match
 		bool asBool() const;
 		long asLong() const;
+		int64_t asInt64() const;
+		uint64_t asUint64() const;
 		std::string const& asString() const;
 		std::vector<std::string> const& asStringList() const;
 
@@ -74,6 +84,8 @@ namespace docopt {
 			
 			bool boolValue;
 			long longValue;
+			int64_t int64Value;
+			uint64_t uint64Value;
 			std::string strValue;
 			std::vector<std::string> strList;
 		};
@@ -83,6 +95,8 @@ namespace docopt {
 				case Kind::Empty: return "empty";
 				case Kind::Bool: return "bool";
 				case Kind::Long: return "long";
+				case Kind::Int64: return "int64";
+				case Kind::Uint64: return "uint64";
 				case Kind::String: return "string";
 				case Kind::StringList: return "string-list";
 			}
@@ -133,6 +147,20 @@ namespace docopt {
 	}
 
 	inline
+	value::value(int64_t v, int)
+	: kind_(Kind::Int64)
+	{
+		variant_.int64Value = v;
+	}
+
+	inline
+	value::value(uint64_t v)
+	: kind_(Kind::Uint64)
+	{
+		variant_.uint64Value = v;
+	}
+
+	inline
 	value::value(std::string v)
 	: kind_(Kind::String)
 	{
@@ -167,6 +195,14 @@ namespace docopt {
 				variant_.longValue = other.variant_.longValue;
 				break;
 
+			case Kind::Int64:
+				variant_.int64Value = other.variant_.int64Value;
+				break;
+
+			case Kind::Uint64:
+				variant_.uint64Value = other.variant_.uint64Value;
+				break;
+
 			case Kind::Empty:
 			default:
 				break;
@@ -194,6 +230,14 @@ namespace docopt {
 				variant_.longValue = other.variant_.longValue;
 				break;
 
+			case Kind::Int64:
+				variant_.int64Value = other.variant_.int64Value;
+				break;
+
+			case Kind::Uint64:
+				variant_.uint64Value = other.variant_.uint64Value;
+				break;
+
 			case Kind::Empty:
 			default:
 				break;
@@ -215,6 +259,8 @@ namespace docopt {
 			case Kind::Empty:
 			case Kind::Bool:
 			case Kind::Long:
+			case Kind::Int64:
+			case Kind::Uint64:
 			default:
 				// trivial dtor
 				break;
@@ -261,6 +307,12 @@ namespace docopt {
 			case Kind::Long:
 				return std::hash<long>()(variant_.longValue);
 
+			case Kind::Int64:
+				return std::hash<int64_t>()(variant_.int64Value);
+
+			case Kind::Uint64:
+				return std::hash<uint64_t>()(variant_.uint64Value);
+
 			case Kind::Empty:
 			default:
 				return std::hash<void*>()(nullptr);
@@ -290,6 +342,53 @@ namespace docopt {
 		}
 		throwIfNotKind(Kind::Long);
 		return variant_.longValue;
+	}
+
+	inline
+	int64_t value::asInt64() const
+	{
+		// Attempt to convert a string to a long
+		if (kind_ == Kind::String) {
+			const std::string& str = variant_.strValue;
+			std::size_t pos;
+			const auto ret = stoll(str, &pos, 0); // Throws if it can't convert
+			if (pos != str.length()) {
+				// The string ended in non-digits.
+				throw std::runtime_error( str + " contains non-numeric characters.");
+			}
+			static_assert(sizeof(long long) >= sizeof(int64_t), "");
+			if (ret < std::numeric_limits<int64_t>::min()) {
+				throw std::out_of_range( str + " is smaller than std::numeric_limits<int64_t>::min().");
+			}
+			if (ret > std::numeric_limits<int64_t>::max()) {
+				throw std::out_of_range( str + " is larger than std::numeric_limits<int64_t>::max().");
+			}
+			return static_cast<int64_t>(ret);
+		}
+		throwIfNotKind(Kind::Int64);
+		return variant_.int64Value;
+	}
+
+	inline
+	uint64_t value::asUint64() const
+	{
+		// Attempt to convert a string to a long
+		if (kind_ == Kind::String) {
+			const std::string& str = variant_.strValue;
+			std::size_t pos;
+			const auto ret = stoull(str, &pos, 0); // Throws if it can't convert
+			if (pos != str.length()) {
+				// The string ended in non-digits.
+				throw std::runtime_error( str + " contains non-numeric characters.");
+			}
+			static_assert(sizeof(unsigned long long) >= sizeof(uint64_t), "");
+			if (ret > std::numeric_limits<uint64_t>::max()) {
+				throw std::out_of_range( str + " is larger than std::numeric_limits<uint64_t>::max().");
+			}
+			return static_cast<uint64_t>(ret);
+		}
+		throwIfNotKind(Kind::Uint64);
+		return variant_.uint64Value;
 	}
 
 	inline
@@ -324,6 +423,12 @@ namespace docopt {
 
 			case Kind::Long:
 				return v1.variant_.longValue==v2.variant_.longValue;
+
+			case Kind::Int64:
+				return v1.variant_.int64Value==v2.variant_.int64Value;
+
+			case Kind::Uint64:
+				return v1.variant_.uint64Value==v2.variant_.uint64Value;
 
 			case Kind::Empty:
 			default:
