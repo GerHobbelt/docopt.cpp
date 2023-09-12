@@ -1,0 +1,32 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+
+bool_flag(
+    name = "use_boost_regex",
+    visibility = ["//visibility:public"],
+    build_setting_default = False,
+)
+config_setting(name = "use_boost_regex_enabled", flag_values = {":use_boost_regex": "true"})
+config_setting(name = "use_boost_regex_disabled", flag_values = {":use_boost_regex": "false"})
+
+cc_library(
+    name = "docopt",
+    visibility = ["//visibility:public"],
+    defines = select({
+        ":use_boost_regex_enabled": ["DOCTOPT_USE_BOOST_REGEX"],
+        ":use_boost_regex_disabled": [],
+    }),
+    hdrs = [
+        "docopt.h",
+        "docopt_value.h",
+        "docopt_util.h",
+    ],
+    srcs = [
+        "docopt_private.h",
+        "docopt.cpp",
+    ],
+    deps = select({
+        ":use_boost_regex_enabled": ["@boost.regex"],
+        ":use_boost_regex_disabled": [],
+    }),
+)

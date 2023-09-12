@@ -30,3 +30,8 @@ docopt-config-version.cmake
 
 # Files configured by CMake
 run_tests
+
+# Bazel
+/bazel-*
+/examples/bazel-*
+user.bazelrc
